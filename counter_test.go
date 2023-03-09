@@ -1,6 +1,7 @@
 package limhook
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -139,4 +140,56 @@ func Test_counter_remove(t *testing.T) {
 			assert.Nil(t, c.ring[c.head])
 		})
 	}
+}
+
+func TestCounter(t *testing.T) {
+
+	c := NewCounter(2, 2)
+
+	ctx3, cancel3 := context.WithCancel(context.Background())
+	ch0 := make(chan struct{})
+	ch1 := make(chan struct{})
+	ch2 := make(chan struct{})
+	ch3 := make(chan struct{})
+
+	go func() {
+		_ = c.Run(context.Background(), func() error {
+			<-ch0
+			return nil
+		})
+	}()
+
+	go func() {
+		_ = c.Run(context.Background(), func() error {
+			<-ch1
+			return nil
+		})
+	}()
+
+	go func() {
+		_ = c.Run(context.Background(), func() error {
+			<-ch2
+			return nil
+		})
+	}()
+
+	go func() {
+		_ = c.Run(ctx3, func() error {
+			<-ch3
+			return nil
+		})
+	}()
+
+	go func() {
+		time.Sleep(time.Millisecond)
+		cancel3()
+	}()
+
+	close(ch0)
+	close(ch1)
+	close(ch2)
+
+	time.Sleep(time.Millisecond)
+
+	assert.Equal(t, c.flying, 0)
 }
