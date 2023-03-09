@@ -143,53 +143,61 @@ func Test_counter_remove(t *testing.T) {
 }
 
 func TestCounter(t *testing.T) {
+	for i := 0; i < 50; i++ {
+		c := NewCounter(2, 2)
 
-	c := NewCounter(2, 2)
+		ctx3, cancel3 := context.WithCancel(context.Background())
+		ch0 := make(chan struct{})
+		ch1 := make(chan struct{})
+		ch2 := make(chan struct{})
 
-	ctx3, cancel3 := context.WithCancel(context.Background())
-	ch0 := make(chan struct{})
-	ch1 := make(chan struct{})
-	ch2 := make(chan struct{})
-	ch3 := make(chan struct{})
+		go func() {
+			_ = c.Run(context.Background(), func() error {
+				<-ch0
+				return nil
+			})
+		}()
 
-	go func() {
-		_ = c.Run(context.Background(), func() error {
-			<-ch0
-			return nil
-		})
-	}()
+		go func() {
+			_ = c.Run(context.Background(), func() error {
+				<-ch1
+				return nil
+			})
+		}()
 
-	go func() {
-		_ = c.Run(context.Background(), func() error {
-			<-ch1
-			return nil
-		})
-	}()
-
-	go func() {
-		_ = c.Run(context.Background(), func() error {
-			<-ch2
-			return nil
-		})
-	}()
-
-	go func() {
-		_ = c.Run(ctx3, func() error {
-			<-ch3
-			return nil
-		})
-	}()
-
-	go func() {
 		time.Sleep(time.Millisecond)
-		cancel3()
-	}()
 
-	close(ch0)
-	close(ch1)
-	close(ch2)
+		go func() {
+			_ = c.Run(ctx3, func() error {
+				return nil
+			})
+		}()
 
-	time.Sleep(time.Millisecond)
+		go func() {
+			_ = c.Run(context.Background(), func() error {
+				<-ch2
+				return nil
+			})
+		}()
 
-	assert.Equal(t, c.flying, 0)
+		go func() {
+			cancel3()
+		}()
+
+		go func() {
+			close(ch0)
+		}()
+
+		go func() {
+			close(ch1)
+		}()
+
+		go func() {
+			close(ch2)
+		}()
+
+		time.Sleep(time.Millisecond * 50)
+
+		assert.Equal(t, 0, c.flying)
+	}
 }

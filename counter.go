@@ -165,10 +165,18 @@ func (c *Counter) Run(ctx context.Context, fn func() error) error {
 
 	select {
 	case <-ctx.Done():
-		c.mx.Lock()
-		c.remove(ch)
-		c.mx.Unlock()
-		return ctx.Err()
+		select {
+		case <-ch:
+			c.mx.Lock()
+			c.done()
+			c.mx.Unlock()
+			return ctx.Err()
+		default:
+			c.mx.Lock()
+			c.remove(ch)
+			c.mx.Unlock()
+			return ctx.Err()
+		}
 	case <-ch:
 		defer func() {
 			c.mx.Lock()
