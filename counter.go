@@ -153,13 +153,13 @@ func (c *Counter) Run(ctx context.Context, fn func() error) error {
 	if !ok {
 		return ErrTooManyRequest
 	}
-	defer func() {
-		c.mx.Lock()
-		c.done()
-		c.mx.Unlock()
-	}()
 
 	if ch == nil {
+		defer func() {
+			c.mx.Lock()
+			c.done()
+			c.mx.Unlock()
+		}()
 		return fn()
 	}
 
@@ -170,6 +170,11 @@ func (c *Counter) Run(ctx context.Context, fn func() error) error {
 		c.mx.Unlock()
 		return ctx.Err()
 	case <-ch:
+		defer func() {
+			c.mx.Lock()
+			c.done()
+			c.mx.Unlock()
+		}()
 		return fn()
 	}
 }
