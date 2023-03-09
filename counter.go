@@ -144,6 +144,9 @@ type Counter struct {
 }
 
 func (c *Counter) Run(ctx context.Context, fn func() error) error {
+	if c.limit == 0 {
+		return fn()
+	}
 	c.mx.Lock()
 	ch, ok := c.add()
 	c.mx.Unlock()
