@@ -73,3 +73,70 @@ func Test_counter(t *testing.T) {
 	c.done()
 	assert.Equal(t, 0, c.flying)
 }
+
+func Test_counter_remove(t *testing.T) {
+	ch0 := make(chan struct{})
+	ch1 := make(chan struct{})
+	ch2 := make(chan struct{})
+	tests := []struct {
+		name string
+		ring []chan struct{}
+		head int
+		arg  <-chan struct{}
+		want []chan struct{}
+	}{
+		{
+			ring: []chan struct{}{ch0, ch1, ch2},
+			head: 0,
+			arg:  ch0,
+			want: []chan struct{}{ch1, ch2, nil},
+		},
+		{
+			ring: []chan struct{}{ch2, ch0, ch1},
+			head: 1,
+			arg:  ch2,
+			want: []chan struct{}{nil, ch0, ch1},
+		},
+		{
+			ring: []chan struct{}{ch0, ch1, nil},
+			head: 2,
+			arg:  ch0,
+			want: []chan struct{}{ch1, nil, nil},
+		},
+		{
+			ring: []chan struct{}{ch0, ch1, nil},
+			head: 2,
+			arg:  ch0,
+			want: []chan struct{}{ch1, nil, nil},
+		},
+		{
+			ring: []chan struct{}{ch1, nil, ch0},
+			head: 1,
+			arg:  ch1,
+			want: []chan struct{}{nil, nil, ch0},
+		},
+		{
+			ring: []chan struct{}{nil, nil, ch0},
+			head: 1,
+			arg:  ch0,
+			want: []chan struct{}{nil, nil, nil},
+		},
+		{
+			ring: []chan struct{}{ch1, nil, ch0},
+			head: 1,
+			arg:  ch0,
+			want: []chan struct{}{nil, nil, ch1},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &counter{
+				ring: tt.ring,
+				head: tt.head,
+			}
+			c.remove(tt.arg)
+			assert.Equal(t, tt.want, c.ring)
+			assert.Nil(t, c.ring[c.head])
+		})
+	}
+}
