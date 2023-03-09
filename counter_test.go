@@ -2,6 +2,8 @@ package limhook
 
 import (
 	"context"
+	"math/rand"
+	"runtime"
 	"testing"
 	"time"
 
@@ -180,21 +182,22 @@ func TestCounter(t *testing.T) {
 			})
 		}()
 
-		go func() {
-			cancel3()
-		}()
+		fns := []func(){
+			cancel3,
+			runtime.Gosched,
+			runtime.Gosched,
+			func() { close(ch0) },
+			func() { close(ch1) },
+			func() { close(ch2) },
+		}
 
-		go func() {
-			close(ch0)
-		}()
+		rand.Shuffle(6, func(i, j int) {
+			fns[i], fns[j] = fns[j], fns[i]
+		})
 
-		go func() {
-			close(ch1)
-		}()
-
-		go func() {
-			close(ch2)
-		}()
+		for _, fn := range fns {
+			fn()
+		}
 
 		time.Sleep(time.Millisecond * 50)
 
