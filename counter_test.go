@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/rand"
 	"runtime"
+	"sync"
 	"testing"
 	"time"
 
@@ -153,11 +154,14 @@ func TestCounter(t *testing.T) {
 		ch1 := make(chan struct{})
 		ch2 := make(chan struct{})
 
+		wg := sync.WaitGroup{}
+		wg.Add(4)
 		go func() {
 			_ = c.Run(context.Background(), func() error {
 				<-ch0
 				return nil
 			})
+			wg.Done()
 		}()
 
 		go func() {
@@ -165,6 +169,7 @@ func TestCounter(t *testing.T) {
 				<-ch1
 				return nil
 			})
+			wg.Done()
 		}()
 
 		time.Sleep(time.Millisecond)
@@ -173,6 +178,7 @@ func TestCounter(t *testing.T) {
 			_ = c.Run(ctx3, func() error {
 				return nil
 			})
+			wg.Done()
 		}()
 
 		go func() {
@@ -180,6 +186,7 @@ func TestCounter(t *testing.T) {
 				<-ch2
 				return nil
 			})
+			wg.Done()
 		}()
 
 		fns := []func(){
@@ -199,7 +206,7 @@ func TestCounter(t *testing.T) {
 			fn()
 		}
 
-		time.Sleep(time.Millisecond * 50)
+		wg.Wait()
 
 		assert.Equal(t, 0, c.flying)
 	}
